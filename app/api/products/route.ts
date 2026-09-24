@@ -2,73 +2,51 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 export const dynamic = 'force-dynamic';
 
-// ==========================================
-// 1. GET: Ambil Semua Produk
-// ==========================================
+// Fungsi bantuan untuk header CORS
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*', // Atau ganti 'http://localhost:3000'
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Tangani preflight request (OPTIONS)
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function GET() {
   try {
     const { data, error } = await supabaseAdmin
       .from('products')
       .select('*');
+      
     if (error) {
-      return NextResponse.json({
-        success: false,
-        message: 'Gagal mengambil data dari Supabase',
-        error_message: error.message,
-        error_code: error.code,
-      }, { status: 400 });
+      return NextResponse.json({ success: false, message: error.message }, { status: 400, headers: corsHeaders });
     }
-    return NextResponse.json({
-      success: true,
-      count: data ? data.length : 0,
-      data: data || [],
-    }, { status: 200 });
+    return NextResponse.json({ success: true, data: data || [] }, { status: 200, headers: corsHeaders });
   } catch (err: any) {
-    return NextResponse.json({
-      success: false,
-      error: err?.message || 'Server Crash / Unknown Error',
-    }, { status: 500 });
+    return NextResponse.json({ success: false, error: err?.message }, { status: 500, headers: corsHeaders });
   }
 }
-// ==========================================
-// 2. POST: Tambah Produk Baru
-// ==========================================
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    // Validasi data sederhana di level Gateway
     if (!body.name || typeof body.price !== 'number') {
-      return NextResponse.json({
-        success: false,
-        message: 'Field "name" (string) dan "price" (number) wajib diisi!',
-      }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'Field "name" dan "price" wajib diisi!' }, { status: 400, headers: corsHeaders });
     }
+
     const { data, error } = await supabaseAdmin
       .from('products')
-      .insert([
-        {
-          name: body.name,
-          price: body.price,
-          stock: body.stock ?? 0,
-        },
-      ])
+      .insert([{ name: body.name, price: body.price, stock: body.stock ?? 0 }])
       .select();
+
     if (error) {
-      return NextResponse.json({
-        success: false,
-        message: 'Gagal menambah data ke Supabase',
-        error_message: error.message,
-      }, { status: 400 });
+      return NextResponse.json({ success: false, message: error.message }, { status: 400, headers: corsHeaders });
     }
-    return NextResponse.json({
-      success: true,
-      message: 'Produk berhasil dibuat!',
-      data: data[0],
-    }, { status: 201 });
+
+    return NextResponse.json({ success: true, message: 'Produk berhasil dibuat!', data: data[0] }, { status: 201, headers: corsHeaders });
   } catch (err: any) {
-    return NextResponse.json({
-      success: false,
-      error: err?.message || 'Invalid JSON request body',
-    }, { status: 400 });
+    return NextResponse.json({ success: false, error: err?.message }, { status: 400, headers: corsHeaders });
   }
 }
